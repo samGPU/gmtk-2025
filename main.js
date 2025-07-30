@@ -15,6 +15,11 @@ function gameLoop() {
   const deltaTime = clock.getDelta();
   renderer.render(deltaTime);
 
+  const hitPoint = interaction.castRay(renderer.floor.mesh, renderer.camera);
+  if (hitPoint) {
+      renderer.player.setUVPosition(hitPoint);
+  }
+
   requestAnimationFrame(gameLoop);
 }
 
