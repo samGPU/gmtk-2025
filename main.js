@@ -2,6 +2,9 @@ import './style.css';
 import Interaction from './src/Interaction'
 import Renderer from './src/Renderer'
 import * as THREE from 'three'
+import GLBLoader from './src/GLBLoader'
+
+const loader = GLBLoader.getInstance('./jet.glb');
 
 const SCORE = {
   value: 0

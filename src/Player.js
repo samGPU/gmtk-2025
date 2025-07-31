@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import GLBLoader from './GLBLoader'
 
 export default class Player {
     constructor(scene, floorSize = 100) {
@@ -8,6 +9,15 @@ export default class Player {
         this.mesh = this.createMesh();
         this.mesh.castShadow = true; // Allow player to cast shadows
         this.mesh.position.set(0, 0.7, 0); // Position the player above the floor
+
+        // Load GLB to replace the placeholder mesh
+        this.glbLoader = GLBLoader.getInstance('./jet.glb');
+        this.isGLBLoaded = false;
+        
+        // Listen for GLB loaded event
+        document.addEventListener('glbLoaded', () => {
+            this.replaceWithGLBMesh();
+        });
 
         this.targetUVPos = new THREE.Vector2(0.5, 0.5);
         this.targetAbsMousePos = new THREE.Vector2(0, 0);
@@ -40,6 +50,38 @@ export default class Player {
         return new THREE.Mesh(geometry, material);
     }
 
+    replaceWithGLBMesh() {
+        // Get the mesh from the loaded GLB
+        const meshNames = Array.from(this.glbLoader.meshes.keys());
+        if (meshNames.length > 0) {
+            const glbMesh = this.glbLoader.getMesh(meshNames[0]); // Get first mesh
+            
+            if (glbMesh) {
+                // Store current properties of the placeholder mesh
+                const currentPosition = this.mesh.position.clone();
+                const currentQuaternion = this.mesh.quaternion.clone();
+                
+                // Remove the placeholder mesh from the scene
+                this.scene.remove(this.mesh);
+                
+                // Set up the GLB mesh to replace the placeholder
+                this.mesh = glbMesh.clone(); // Clone to avoid affecting the original
+         
+                // Apply the stored properties
+                this.mesh.position.copy(currentPosition);
+                this.mesh.quaternion.copy(currentQuaternion);
+                this.mesh.castShadow = true;
+                this.mesh.receiveShadow = true;
+                
+                // Add the new mesh to the scene
+                this.scene.add(this.mesh);
+                this.isGLBLoaded = true;
+                
+                console.log('Jet model loaded and replaced placeholder mesh');
+            }
+        }
+    }
+
     setUVPosition(hitPoint) {
         this.targetUVPos.x = hitPoint.x;
         this.targetUVPos.y = hitPoint.y;
@@ -68,8 +110,8 @@ export default class Player {
         this.speed.x += ax;
         this.speed.y += ay;
 
-        this.speed.x *= Math.pow(deltaTime, 0.005);
-        this.speed.y *= Math.pow(deltaTime, 0.005);
+        this.speed.x *= Math.pow(deltaTime, 0.05);
+        this.speed.y *= Math.pow(deltaTime, 0.05);
     }
 
     lookAtTarget(deltaTime) {

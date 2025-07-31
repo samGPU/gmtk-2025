@@ -8,7 +8,7 @@ export default class Floor {
     }
 
     createMesh() {
-        const geometry = new THREE.PlaneGeometry(100, 100);
+        const geometry = new THREE.PlaneGeometry(30, 30, 50, 50);
         const material = new THREE.MeshStandardMaterial({
             color: 0xA1A1FF,
             metalness: 0.9,
