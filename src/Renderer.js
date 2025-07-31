@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import Floor from './Floor';
 import Player from './Player';
 
@@ -24,6 +25,8 @@ export default class Renderer {
         this.renderer.setClearColor(0x6495ED, 1);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.BasicShadowMap;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.0;
 
         window.addEventListener('resize', this.onWindowResize.bind(this), false);
 
@@ -31,15 +34,16 @@ export default class Renderer {
         this.scene.add(this.floor.mesh);
 
         this.addLights();
+        this.loadEnvironment();
 
         this.player = new Player(this.scene);
     }
 
     addLights() {
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2); // Reduced ambient light
         this.scene.add(ambientLight);
     
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 4);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2); // Reduced intensity
         directionalLight.position.set(0, 5, 0);
         directionalLight.target.position.set(0, 0, 0);
         directionalLight.castShadow = true;
@@ -55,6 +59,21 @@ export default class Renderer {
         directionalLight.shadow.camera.far = 50;
     
         this.scene.add(directionalLight);
+    }
+
+    loadEnvironment() {
+        const rgbeLoader = new RGBELoader();
+        rgbeLoader.load('/1k.hdr', (texture) => {
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            this.scene.environment = texture;
+            this.scene.background = texture;
+            
+            // Update floor material to use environment map for reflections
+            if (this.floor && this.floor.mesh) {
+                this.floor.mesh.material.envMap = texture;
+                this.floor.mesh.material.needsUpdate = true;
+            }
+        });
     }
 
     onWindowResize() {
