@@ -14,12 +14,26 @@ export default class Player {
 
         this.distanceToTarget = 0;
         this.speed = new THREE.Vector2(0, 0); // Speed of movement towards the target
+        this.direction = new THREE.Vector2(0, 0);
+        this.jumping = false;
+        this.jumpVelocity = 0;
+        this.jumpHeight = 3; // Maximum jump height
+        this.jumpSpeed = 8; // Jump speed
+        this.gravity = 15; // Gravity strength
+        this.groundY = 0.7; // Ground level Y position
+
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+                this.startJump(); // Trigger a jump when space is pressed
+            }
+        });
 
         this.scene.add(this.mesh);
     }
 
     createMesh() {
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const geometry = new THREE.ConeGeometry( 0.5, 1, 32 );
+        geometry.rotateX(Math.PI / 2);
         const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
         material.metalness = 0.5; // Add some metallic effect
         material.roughness = 0.5; // Adjust roughness for a shiny appearance
@@ -31,9 +45,19 @@ export default class Player {
         this.targetUVPos.y = hitPoint.y;
     }
 
-    update(deltaTime) {
+    rotate(dx, dy) {
+        // Calculate the angle to point toward the target
+        const angle = Math.atan2(dx, dy);
+        
+        // Set the rotation around the Y-axis to face the target
+        // Since the cone was rotated 90 degrees on X-axis, it points along Z-axis
+        // We need to rotate around Y-axis to change its heading
+        this.mesh.rotation.y = angle + (Math.PI / 2);
+    }
+
+    calculateSpeed(deltaTime) {
         this.targetAbsMousePos.x = (this.targetUVPos.x - 0.5) * this.FLOORSIZE;
-        this.targetAbsMousePos.y = (this.targetUVPos.y - 0.5) * this.FLOORSIZE;
+        this.targetAbsMousePos.y = -(this.targetUVPos.y - 0.5) * this.FLOORSIZE;
 
         let dx = this.targetAbsMousePos.x - this.mesh.position.x;
         let dy = this.targetAbsMousePos.y - this.mesh.position.z;
@@ -46,8 +70,51 @@ export default class Player {
 
         this.speed.x *= Math.pow(deltaTime, 0.005);
         this.speed.y *= Math.pow(deltaTime, 0.005);
+    }
+
+    lookAtTarget(deltaTime) {
+        const targetPosition = new THREE.Vector3(this.targetAbsMousePos.x, this.mesh.position.y, this.targetAbsMousePos.y);
+        
+        // Create a temporary object to calculate the target rotation
+        const tempObject = new THREE.Object3D();
+        tempObject.position.copy(this.mesh.position);
+        tempObject.lookAt(targetPosition);
+        
+        // Interpolate between current rotation and target rotation
+        const rotationSpeed = 5.0; // Adjust this value to control rotation speed
+        const lerpFactor = Math.min(1.0, rotationSpeed * deltaTime);
+        
+        this.mesh.quaternion.slerp(tempObject.quaternion, lerpFactor);
+    }
+
+    startJump() {
+        if (!this.jumping && this.mesh.position.y <= this.groundY + 0.1) {
+            this.jumping = true;
+            this.jumpVelocity = this.jumpSpeed;
+        }
+    }
+
+    doJump(deltaTime) {
+        if (!this.jumping) return;
+
+        this.jumpVelocity -= this.gravity * deltaTime;
+        
+        this.mesh.position.y += this.jumpVelocity * deltaTime;
+
+        if (this.mesh.position.y <= this.groundY) {
+            this.mesh.position.y = this.groundY;
+            this.jumping = false;
+            this.jumpVelocity = 0;
+        }
+    }
+
+    update(deltaTime) {
+        this.calculateSpeed(deltaTime);
 
         this.mesh.position.x += this.speed.x;
         this.mesh.position.z += this.speed.y;
+
+        this.lookAtTarget(deltaTime);
+        this.doJump(deltaTime);
     }
 }
